@@ -8,10 +8,25 @@
  * out = not (a == b)
  */
 
+ /*
+ *
+ * a  xor  b
+ *
+ * (a or b)   and  ( not (a and b) )
+ *
+ */
+
 CHIP Xor {
     IN a, b;
     OUT out;
 
     PARTS:
-    // Put your code here:
+    Or(a=a, b=b, out=AorB);
+
+    // replace with a single nand
+    /*And(a=a, b=b, out=AandB);
+    Not(in=AandB, out=AnandB);*/
+    Nand(a=a, b=b, out=AnandB);
+
+    And(a=AorB, b=AnandB, out=out);
 }

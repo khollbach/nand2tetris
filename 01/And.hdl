@@ -13,6 +13,8 @@ CHIP And {
     IN a, b;
     OUT out;
 
+    // NOTE: you can't use underscores in names.
     PARTS:
-    // Put your code here:
+    Nand(a=a, b=b, out=nandAB);
+    Not(in=nandAB, out=out);
 }
