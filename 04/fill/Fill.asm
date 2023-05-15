@@ -11,12 +11,6 @@
 // "white" in every pixel;
 // the screen should remain fully clear as long as no key is pressed.
 
-// notes:
-// R0 - R15
-// SP LCL ARG THIS THAT (alias 0 ..= 4)
-// SCREEN
-// KBD
-
 (START)
     // R3 := screen
     // R4 := screen + 8K
@@ -29,6 +23,27 @@
     @R4
     M=D
 
+    // if a key is pressed, jump to BLACK
+    @KBD
+    D=M
+    @BLACK
+    D;JNE
+
+(WHITE)
+    // R5 := 16 zeros
+    @R5
+    M=0
+
+    @LOOP
+    0;JMP
+
+(BLACK)
+    // R5 := 16 ones
+    @R5
+    M=-1
+
+    // fall through, to LOOP
+
 (LOOP)
     // if R3 >= R4, break
     @R3
@@ -38,10 +53,12 @@
     @END
     D;JGE
 
-    // fill a whole word with 16 ones
+    // *R3 := 16 bits (pixels) of R5
+    @R5
+    D=M
     @R3
     A=M  // "dereference" R3
-    M=-1
+    M=D
 
     // R3 += 1
     @R3
