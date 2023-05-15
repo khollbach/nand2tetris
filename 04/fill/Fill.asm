@@ -11,4 +11,46 @@
 // "white" in every pixel;
 // the screen should remain fully clear as long as no key is pressed.
 
-// Put your code here.
+// notes:
+// R0 - R15
+// SP LCL ARG THIS THAT (alias 0 ..= 4)
+// SCREEN
+// KBD
+
+(START)
+    // R3 := screen
+    // R4 := screen + 8K
+    @SCREEN
+    D=A
+    @R3
+    M=D
+    @8192
+    D=D+A
+    @R4
+    M=D
+
+(LOOP)
+    // if R3 >= R4, break
+    @R3
+    D=M
+    @R4
+    D=D-M
+    @END
+    D;JGE
+
+    // fill a whole word with 16 ones
+    @R3
+    A=M  // "dereference" R3
+    M=-1
+
+    // R3 += 1
+    @R3
+    M=M+1
+
+    @LOOP
+    0;JMP
+
+(END)
+    // run forever
+    @START
+    0;JMP
