@@ -1,4 +1,4 @@
-use anyhow::{ensure, Context, Result};
+use anyhow::{bail, ensure, Context, Result};
 use itertools::Itertools;
 
 /// Remove comments and blank lines.
@@ -41,7 +41,7 @@ pub struct CInstr {
     jump: Jump,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 struct Dest {
     a: bool,
     d: bool,
@@ -54,8 +54,9 @@ struct Comp {
     c_bits: [bool; 6],
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 enum Jump {
+    #[default]
     Never,
     Greater,
     Equal,
@@ -79,8 +80,9 @@ impl Line {
 }
 
 impl AInstr {
+    /// `line` must already be trimmed.
     fn parse(line: &str) -> Result<Self> {
-        let line = line.trim();
+        debug_assert_eq!(line, line.trim());
         ensure!(
             line.starts_with('@'),
             "A-instruction must start with '@': {line:?}"
@@ -101,9 +103,45 @@ impl AInstr {
 }
 
 impl CInstr {
-    fn parse(line: &str) -> Result<Self> {
-        let line = line.trim();
+    /// `line` must already be trimmed.
+    fn parse(mut line: &str) -> Result<Self> {
+        debug_assert_eq!(line, line.trim());
 
+        let dest = Dest::parse(&mut line);
+        // let jump = Jump::parse(&mut line);
+        // let comp = Comp::parse(&line)?;
+
+        // Ok(CInstr { dest, comp, jump })
         todo!()
+    }
+}
+
+impl Dest {
+    /// `line` must already be trimmed.
+    ///
+    /// Consume the `dest=` prefix of `line`, and parse it into a `Dest`.
+    ///
+    /// If the line doesn't start with `dest=`, return `Dest::default()`.
+    fn parse(line: &mut &str) -> Result<Self> {
+        let Some((dest, rest)) = line.split_once('=') else {
+            return Ok(Dest::default());
+        };
+
+        let bits = match dest {
+            "M" => [0, 0, 1],
+            "D" => [0, 1, 0],
+            "DM" => [0, 1, 1],
+            "A" => [1, 0, 0],
+            "AM" => [1, 0, 1],
+            "AD" => [1, 1, 0],
+            "ADM" => [1, 1, 1],
+            _ => {
+                bail!("dest must be a non-empty subsequence of `ADM` (in that order); got: {dest:?}")
+            }
+        };
+        let [a, d, m] = bits.map(|bit| bit != 0);
+
+        *line = rest;
+        Ok(Dest { a, d, m })
     }
 }
