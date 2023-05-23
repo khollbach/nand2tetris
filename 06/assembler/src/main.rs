@@ -4,15 +4,14 @@ use std::{
     env,
     ffi::OsStr,
     fs::File,
-    io::{prelude::*, BufReader, SeekFrom},
+    io::{prelude::*, BufReader},
     path::Path,
 };
 
 use anyhow::{ensure, Context, Result};
 use itertools::Itertools;
 
-use crate::parse::remove_comments;
-use crate::parse::parse_line;
+use crate::parse::{remove_comments, Line};
 
 fn main() -> Result<()> {
     let (mut in_file, _out_file) = open_files()?;
@@ -22,7 +21,7 @@ fn main() -> Result<()> {
         .map(|r| r.map_err(Into::into));
 
     for line in remove_comments(lines) {
-        dbg!(parse_line(dbg!(&line?)));
+        dbg!(Line::parse(dbg!(&line?))?);
     }
 
     // // second pass

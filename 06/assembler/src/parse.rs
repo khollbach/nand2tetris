@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{ensure, Context, Result};
 use itertools::Itertools;
 
 /// Remove comments and blank lines.
@@ -8,7 +8,7 @@ use itertools::Itertools;
 /// ```no_run
 /// A=D+M // this is an end-of-line comment, but that's not allowed
 /// ```
-// 
+//
 // todo: could be a nice improvement (and not too hard) to correctly handle
 // end-of-line comments.
 pub fn remove_comments(
@@ -66,6 +66,44 @@ enum Jump {
     Always,
 }
 
-pub fn parse_line(line: &str) -> Line {
-    todo!()
+impl Line {
+    pub fn parse(line: &str) -> Result<Self> {
+        let line = line.trim();
+
+        if line.starts_with('@') {
+            Ok(Line::AInstr(AInstr::parse(line)?))
+        } else {
+            Ok(Line::CInstr(CInstr::parse(line)?))
+        }
+    }
+}
+
+impl AInstr {
+    fn parse(line: &str) -> Result<Self> {
+        let line = line.trim();
+        ensure!(
+            line.starts_with('@'),
+            "A-instruction must start with '@': {line:?}"
+        );
+
+        let value: u16 = line[1..]
+            .parse()
+            .with_context(|| format!("failed to parse A-instruction as u16: {line:?}"))?;
+
+        let limit = 2u16.pow(15);
+        ensure!(
+            value < limit,
+            "A-instruction value must be less than limit: {value} vs {limit}"
+        );
+
+        Ok(AInstr { value })
+    }
+}
+
+impl CInstr {
+    fn parse(line: &str) -> Result<Self> {
+        let line = line.trim();
+
+        todo!()
+    }
 }
