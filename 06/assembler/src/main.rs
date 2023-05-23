@@ -1,3 +1,5 @@
+mod parse;
+
 use std::{
     env,
     ffi::OsStr,
@@ -9,19 +11,25 @@ use std::{
 use anyhow::{ensure, Context, Result};
 use itertools::Itertools;
 
+use crate::parse::remove_comments;
+use crate::parse::parse_line;
+
 fn main() -> Result<()> {
     let (mut in_file, _out_file) = open_files()?;
 
-    // first pass
-    for line in BufReader::new(&mut in_file).lines() {
-        dbg!(line?);
+    let lines = BufReader::new(&mut in_file)
+        .lines()
+        .map(|r| r.map_err(Into::into));
+
+    for line in remove_comments(lines) {
+        dbg!(parse_line(dbg!(&line?)));
     }
 
-    // second pass
-    in_file.seek(SeekFrom::Start(0))?;
-    for line in BufReader::new(&mut in_file).lines() {
-        dbg!(line?);
-    }
+    // // second pass
+    // in_file.seek(SeekFrom::Start(0))?;
+    // for line in BufReader::new(in_file).lines() {
+    //     dbg!(line?);
+    // }
 
     Ok(())
 }
