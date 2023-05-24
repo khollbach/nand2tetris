@@ -21,7 +21,7 @@ fn main() -> Result<()> {
         .map(|r| r.map_err(Into::into));
 
     for line in remove_comments(lines) {
-        let instr = dbg!(Instr::parse(dbg!(&line?))?);
+        let instr = Instr::parse(dbg!(&line?))?;
         let code = instr.code_gen();
         eprintln!("{code:0>16b}");
     }
