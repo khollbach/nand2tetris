@@ -50,7 +50,9 @@ struct Dest {
 
 #[derive(Debug)]
 struct Comp {
-    /// Note that only certain combinations are valid.
+    a_bit: bool,
+
+    /// Note: only certain combinations of (a_bit, c_bits) are valid.
     c_bits: [bool; 6],
 }
 
@@ -108,10 +110,9 @@ impl CInstr {
 
         let dest = Dest::parse(&mut line)?;
         let jump = Jump::parse(&mut line)?;
-        // let comp = Comp::parse(&line)?;
+        let comp = Comp::parse(&line)?;
 
-        // Ok(CInstr { dest, comp, jump })
-        todo!()
+        Ok(CInstr { dest, comp, jump })
     }
 }
 
@@ -122,6 +123,8 @@ impl Dest {
     ///
     /// If the line doesn't start with `dest=`, return `Dest::default()`.
     fn parse(line: &mut &str) -> Result<Self> {
+        debug_assert_eq!(*line, line.trim());
+
         let Some((dest, rest)) = line.split_once('=') else {
             return Ok(Dest::default());
         };
@@ -152,6 +155,8 @@ impl Jump {
     ///
     /// If the line doesn't end with `;jump`, return `Jump::Never`.
     fn parse(line: &mut &str) -> Result<Self> {
+        debug_assert_eq!(*line, line.trim());
+
         let Some((rest, jump)) = line.split_once(';') else {
             return Ok(Jump::Never);
         };
@@ -169,5 +174,55 @@ impl Jump {
 
         *line = rest;
         Ok(jump)
+    }
+}
+
+impl Comp {
+    /// Parse `expr` as a `comp` field.
+    ///
+    /// You must first strip the optional `dest=` and `;jump` before calling
+    /// this function.
+    fn parse(expr: &str) -> Result<Self> {
+        let (a_bit, c_bits) = match expr {
+            "0" => (0, [1, 0, 1, 0, 1, 0]),
+            "1" => (0, [1, 1, 1, 1, 1, 1]),
+            "-1" => (0, [1, 1, 1, 0, 1, 0]),
+
+            "D" => (0, [0, 0, 1, 1, 0, 0]),
+            "A" => (0, [1, 1, 0, 0, 0, 0]),
+            "M" => (1, [1, 1, 0, 0, 0, 0]),
+            "!D" => (0, [0, 0, 1, 1, 0, 1]),
+            "!A" => (0, [1, 1, 0, 0, 0, 1]),
+            "!M" => (1, [1, 1, 0, 0, 0, 1]),
+            "-D" => (0, [0, 0, 1, 1, 1, 1]),
+            "-A" => (0, [1, 1, 0, 0, 1, 1]),
+            "-M" => (1, [1, 1, 0, 0, 1, 1]),
+
+            "D+1" => (0, [0, 1, 1, 1, 1, 1]),
+            "A+1" => (0, [1, 1, 0, 1, 1, 1]),
+            "M+1" => (1, [1, 1, 0, 1, 1, 1]),
+            "D-1" => (0, [0, 0, 1, 1, 1, 0]),
+            "A-1" => (0, [1, 1, 0, 0, 1, 0]),
+            "M-1" => (1, [1, 1, 0, 0, 1, 0]),
+
+            "D+A" => (0, [0, 0, 0, 0, 1, 0]),
+            "D+M" => (1, [0, 0, 0, 0, 1, 0]),
+            "D-A" => (0, [0, 1, 0, 0, 1, 1]),
+            "D-M" => (1, [0, 1, 0, 0, 1, 1]),
+            "A-D" => (0, [0, 0, 0, 1, 1, 1]),
+            "M-D" => (1, [0, 0, 0, 1, 1, 1]),
+
+            "D&A" => (0, [0, 0, 0, 0, 0, 0]),
+            "D&M" => (1, [0, 0, 0, 0, 0, 0]),
+            "D|A" => (0, [0, 1, 0, 1, 0, 1]),
+            "D|M" => (1, [0, 1, 0, 1, 0, 1]),
+
+            _ => bail!("unrecognized comp expresion {expr:?} (note: arguments *must* appear in alphabetical order)"),
+        };
+
+        let a_bit = a_bit != 0;
+        let c_bits = c_bits.map(|bit| bit != 0);
+
+        Ok(Comp { a_bit, c_bits })
     }
 }
