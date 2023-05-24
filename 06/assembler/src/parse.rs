@@ -54,9 +54,8 @@ struct Comp {
     c_bits: [bool; 6],
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 enum Jump {
-    #[default]
     Never,
     Greater,
     Equal,
@@ -107,8 +106,8 @@ impl CInstr {
     fn parse(mut line: &str) -> Result<Self> {
         debug_assert_eq!(line, line.trim());
 
-        let dest = Dest::parse(&mut line);
-        // let jump = Jump::parse(&mut line);
+        let dest = Dest::parse(&mut line)?;
+        let jump = Jump::parse(&mut line)?;
         // let comp = Comp::parse(&line)?;
 
         // Ok(CInstr { dest, comp, jump })
@@ -135,13 +134,40 @@ impl Dest {
             "AM" => [1, 0, 1],
             "AD" => [1, 1, 0],
             "ADM" => [1, 1, 1],
-            _ => {
-                bail!("dest must be a non-empty subsequence of `ADM` (in that order); got: {dest:?}")
-            }
+            _ => bail!(
+                "dest must be a non-empty subsequence of `ADM` (in that order); got: {dest:?}"
+            ),
         };
         let [a, d, m] = bits.map(|bit| bit != 0);
 
         *line = rest;
         Ok(Dest { a, d, m })
+    }
+}
+
+impl Jump {
+    /// `line` must already be trimmed.
+    ///
+    /// Consume the `;jump` suffix of `line`, and parse it into a `Jump`.
+    ///
+    /// If the line doesn't end with `;jump`, return `Jump::Never`.
+    fn parse(line: &mut &str) -> Result<Self> {
+        let Some((rest, jump)) = line.split_once(';') else {
+            return Ok(Jump::Never);
+        };
+
+        let jump = match jump {
+            "JGT" => Jump::Greater,
+            "JEQ" => Jump::Equal,
+            "JGE" => Jump::GreaterEqual,
+            "JLT" => Jump::Less,
+            "JNE" => Jump::NotEqual,
+            "JLE" => Jump::LessEqual,
+            "JMP" => Jump::Always,
+            _ => bail!("jump must be one of {{JGT, JEQ, JGE, JLT, JNE, JLE, JMP}}; got: {jump:?}"),
+        };
+
+        *line = rest;
+        Ok(jump)
     }
 }
