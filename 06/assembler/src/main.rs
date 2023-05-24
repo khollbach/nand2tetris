@@ -1,4 +1,4 @@
-mod parse;
+mod instr;
 
 use std::{
     env,
@@ -11,7 +11,7 @@ use std::{
 use anyhow::{ensure, Context, Result};
 use itertools::Itertools;
 
-use crate::parse::{remove_comments, Line};
+use crate::instr::Instr;
 
 fn main() -> Result<()> {
     let (mut in_file, _out_file) = open_files()?;
@@ -21,7 +21,9 @@ fn main() -> Result<()> {
         .map(|r| r.map_err(Into::into));
 
     for line in remove_comments(lines) {
-        dbg!(Line::parse(dbg!(&line?))?);
+        let instr = dbg!(Instr::parse(dbg!(&line?))?);
+        let code = instr.code_gen();
+        eprintln!("{code:0>16b}");
     }
 
     // // second pass
@@ -60,4 +62,23 @@ fn open_files() -> Result<(File, File)> {
         .with_context(|| format!("couldn't create file {}", out_path.display()))?;
 
     Ok((in_file, out_file))
+}
+
+/// Remove comments and blank lines.
+///
+/// Only handles comments that appear on their own line. E.g., you're not
+/// allowed to write:
+/// ```no_run
+/// A=D+M // this is an end-of-line comment, but that's not allowed
+/// ```
+//
+// todo: could be a nice improvement (and not too hard) to correctly handle
+// end-of-line comments.
+pub fn remove_comments(
+    lines: impl Iterator<Item = Result<String>>,
+) -> impl Iterator<Item = Result<String>> {
+    lines.filter_ok(|line| {
+        let line = line.trim();
+        !(line.is_empty() || line.starts_with("//"))
+    })
 }
