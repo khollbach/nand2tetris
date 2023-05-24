@@ -14,16 +14,16 @@ use itertools::Itertools;
 use crate::instr::Instr;
 
 fn main() -> Result<()> {
-    let (mut in_file, _out_file) = open_files()?;
+    let (mut in_file, mut out_file) = open_files()?;
 
     let lines = BufReader::new(&mut in_file)
         .lines()
         .map(|r| r.map_err(Into::into));
 
     for line in remove_comments(lines) {
-        let instr = Instr::parse(dbg!(&line?))?;
+        let instr = Instr::parse(&line?)?;
         let code = instr.code_gen();
-        eprintln!("{code:0>16b}");
+        writeln!(out_file, "{code:0>16b}")?;
     }
 
     // // second pass
