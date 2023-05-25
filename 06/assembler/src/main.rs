@@ -71,20 +71,20 @@ fn translate(in_file: File, mut out_file: File) -> Result<()> {
 }
 
 /// Remove comments and blank lines.
-///
-/// Only handles comments that appear on their own line. E.g., you're not
-/// allowed to write:
-/// ```no_run
-/// A=D+M // this is an end-of-line comment, but that's not allowed
-/// ```
-//
-// todo: could be a nice improvement (and not too hard) to correctly handle
-// end-of-line comments.
-pub fn remove_comments(
+fn remove_comments(
     lines: impl Iterator<Item = Result<String>>,
 ) -> impl Iterator<Item = Result<String>> {
-    lines.filter_ok(|line| {
-        let line = line.trim();
-        !(line.is_empty() || line.starts_with("//"))
+    lines.filter_map_ok(|mut line| {
+        // Remove everything after the first "//".
+        if let Some(idx) = line.find("//") {
+            line.truncate(idx);
+        }
+
+        // If this line is blank, filter it out.
+        if line.trim().is_empty() {
+            None
+        } else {
+            Some(line)
+        }
     })
 }
