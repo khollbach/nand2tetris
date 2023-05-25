@@ -1,3 +1,4 @@
+mod symbol_table;
 mod instr;
 
 use std::{
