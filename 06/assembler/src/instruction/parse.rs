@@ -1,10 +1,62 @@
+//! Parse an instruction from a string.
+
 use anyhow::{bail, ensure, Context, Result};
 
-use super::{AInstr, CInstr, Comp, Dest, Instr, InstrInner, Jump};
+use super::{AInstr, CInstr, Comp, Dest, Instr, InstrInner, Jump, Line};
 
-impl Instr {
+impl Line {
     pub fn parse(line: &str) -> Result<Self> {
         let line = line.trim();
+
+        if line.starts_with('(') {
+            let label = parse_label(line)?;
+            Ok(Line::Label(label))
+        } else {
+            let instr = Instr::parse(line)?;
+            Ok(Line::Instr(instr))
+        }
+    }
+}
+
+fn parse_label(line: &str) -> Result<String> {
+    debug_assert_eq!(line, line.trim());
+    assert!(line.starts_with('('));
+
+    ensure!(line.ends_with(')'), "line must end with ')': {line:?}");
+    let len = line.len();
+    let symbol = &line[1..len - 1];
+
+    validate_symbol(symbol)?;
+
+    Ok(String::from(symbol))
+}
+
+/// From the spec:
+///
+/// "A symbol can be any sequence of letters, digits, underscore (_), dot (.),
+/// dollar sign ($), and colon (:) that does not begin with a digit."
+fn validate_symbol(s: &str) -> Result<()> {
+    for c in s.chars() {
+        if !is_valid_char(c) {
+            bail!("invalid character {c:?} in symbol {s:?}");
+        }
+    }
+
+    if s.starts_with(|c: char| c.is_ascii_digit()) {
+        bail!("symbol names must not start with a digit: {s:?}");
+    }
+
+    Ok(())
+}
+
+/// Helper function for `validate_symbol`.
+fn is_valid_char(c: char) -> bool {
+    c.is_ascii_alphanumeric() || "_.$:".contains(c)
+}
+
+impl Instr {
+    fn parse(line: &str) -> Result<Self> {
+        debug_assert_eq!(line, line.trim());
 
         let inner = if line.starts_with('@') {
             InstrInner::AInstr(AInstr::parse(line)?)
@@ -17,30 +69,36 @@ impl Instr {
 }
 
 impl AInstr {
-    /// `line` must already be trimmed.
     fn parse(line: &str) -> Result<Self> {
         debug_assert_eq!(line, line.trim());
+
         ensure!(
             line.starts_with('@'),
             "A-instruction must start with '@': {line:?}"
         );
+        let word = &line[1..];
 
-        let value: u16 = line[1..]
-            .parse()
-            .with_context(|| format!("failed to parse A-instruction as u16: {line:?}"))?;
+        if word.starts_with(|c: char| c.is_ascii_digit()) {
+            let value: u16 = word
+                .parse()
+                .with_context(|| format!("failed to parse A-instruction as u16: {line:?}"))?;
 
-        let limit = 2u16.pow(15);
-        ensure!(
-            value < limit,
-            "A-instruction value must be less than limit: {value} vs {limit}"
-        );
+            let limit = 2u16.pow(15);
+            ensure!(
+                value < limit,
+                "A-instruction literal must be less than limit: {value} vs {limit}"
+            );
 
-        Ok(AInstr { value })
+            Ok(AInstr::Literal(value))
+        } else {
+            validate_symbol(word)?;
+
+            Ok(AInstr::Symbol(String::from(word)))
+        }
     }
 }
 
 impl CInstr {
-    /// `line` must already be trimmed.
     fn parse(mut line: &str) -> Result<Self> {
         debug_assert_eq!(line, line.trim());
 
@@ -53,8 +111,6 @@ impl CInstr {
 }
 
 impl Dest {
-    /// `line` must already be trimmed.
-    ///
     /// Consume the `dest=` prefix of `line`, and parse it into a `Dest`.
     ///
     /// If the line doesn't start with `dest=`, return `Dest::default()`.
@@ -86,8 +142,6 @@ impl Dest {
 }
 
 impl Jump {
-    /// `line` must already be trimmed.
-    ///
     /// Consume the `;jump` suffix of `line`, and parse it into a `Jump`.
     ///
     /// If the line doesn't end with `;jump`, return `Jump::Never`.
@@ -142,19 +196,19 @@ impl Comp {
             "A-1" => (0, [1, 1, 0, 0, 1, 0]),
             "M-1" => (1, [1, 1, 0, 0, 1, 0]),
 
-            "D+A" => (0, [0, 0, 0, 0, 1, 0]),
-            "D+M" => (1, [0, 0, 0, 0, 1, 0]),
+            "D+A" | "A+D" => (0, [0, 0, 0, 0, 1, 0]),
+            "D+M" | "M+D" => (1, [0, 0, 0, 0, 1, 0]),
             "D-A" => (0, [0, 1, 0, 0, 1, 1]),
             "D-M" => (1, [0, 1, 0, 0, 1, 1]),
             "A-D" => (0, [0, 0, 0, 1, 1, 1]),
             "M-D" => (1, [0, 0, 0, 1, 1, 1]),
 
-            "D&A" => (0, [0, 0, 0, 0, 0, 0]),
-            "D&M" => (1, [0, 0, 0, 0, 0, 0]),
-            "D|A" => (0, [0, 1, 0, 1, 0, 1]),
-            "D|M" => (1, [0, 1, 0, 1, 0, 1]),
+            "D&A" | "A&D" => (0, [0, 0, 0, 0, 0, 0]),
+            "D&M" | "M&D" => (1, [0, 0, 0, 0, 0, 0]),
+            "D|A" | "A|D" => (0, [0, 1, 0, 1, 0, 1]),
+            "D|M" | "M|D" => (1, [0, 1, 0, 1, 0, 1]),
 
-            _ => bail!("unrecognized comp expresion {expr:?} (note: arguments *must* appear in alphabetical order)"),
+            _ => bail!("unrecognized comp expresion {expr:?}"),
         };
 
         let a_bit = a_bit != 0;

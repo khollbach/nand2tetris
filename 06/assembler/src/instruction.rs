@@ -1,6 +1,16 @@
+//! Data types to represent assembly instructions.
+
 mod parse;
 mod code_gen;
 
+/// Either an instruction, or a "label" pseudo-instruction.
+#[derive(Debug)]
+pub enum Line {
+    Instr(Instr),
+    Label(String),
+}
+
+/// An A-instruction or a C-instruction.
 #[derive(Debug)]
 pub struct Instr {
     // "private" enum
@@ -14,10 +24,12 @@ enum InstrInner {
 }
 
 #[derive(Debug)]
-struct AInstr {
+enum AInstr {
+    Symbol(String),
+
     /// The highest bit should never be set.
     /// I.e., the max value is 2^15 - 1.
-    value: u16,
+    Literal(u16),
 }
 
 #[derive(Debug)]

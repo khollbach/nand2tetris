@@ -1,17 +1,30 @@
+//! Generate binary machine code for an instruction.
+
+use anyhow::Result;
+
 use super::{AInstr, CInstr, Comp, Dest, Instr, InstrInner, Jump};
+use crate::symbol_table::SymbolTable;
 
 impl Instr {
-    pub fn code_gen(&self) -> u16 {
-        match &self.inner {
-            InstrInner::AInstr(inner) => inner.code_gen(),
-            InstrInner::CInstr(inner) => inner.code_gen(),
+    /// Unknown symbols are assumed to be new variables, and we generate new
+    /// symbol-table entries accordingly.
+    pub fn code_gen(self, symbol_table: &mut SymbolTable) -> Result<u16> {
+        match self.inner {
+            InstrInner::AInstr(a) => a.code_gen(symbol_table),
+            InstrInner::CInstr(c) => Ok(c.code_gen()),
         }
     }
 }
 
 impl AInstr {
-    fn code_gen(&self) -> u16 {
-        self.value
+    fn code_gen(self, symbol_table: &mut SymbolTable) -> Result<u16> {
+        match self {
+            AInstr::Literal(value) => Ok(value),
+            AInstr::Symbol(symbol) => match symbol_table.lookup_symbol(&symbol) {
+                Some(value) => Ok(value),
+                None => symbol_table.new_variable(symbol),
+            },
+        }
     }
 }
 
