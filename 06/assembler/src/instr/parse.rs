@@ -65,19 +65,20 @@ impl Dest {
             return Ok(Dest::default());
         };
 
-        let bits = match dest {
-            "M" => [0, 0, 1],
-            "D" => [0, 1, 0],
-            "DM" => [0, 1, 1],
-            "A" => [1, 0, 0],
-            "AM" => [1, 0, 1],
-            "AD" => [1, 1, 0],
-            "ADM" => [1, 1, 1],
-            _ => bail!(
-                "dest must be a non-empty subsequence of `ADM` (in that order); got: {dest:?}"
-            ),
-        };
-        let [a, d, m] = bits.map(|bit| bit != 0);
+        ensure!(!dest.is_empty(), "empty dest field in line {line:?}");
+        for c in dest.chars() {
+            if !"ADM".contains(c) {
+                bail!("invalid dest char {c:?} in line {line:?}");
+            }
+        }
+        ensure!(
+            dest.len() <= 3,
+            "repeated char in dest field {dest:?}. line: {line:?}"
+        );
+
+        let a = dest.contains('A');
+        let d = dest.contains('D');
+        let m = dest.contains('M');
 
         *line = rest;
         Ok(Dest { a, d, m })
