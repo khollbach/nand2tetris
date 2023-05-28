@@ -3,6 +3,11 @@
 mod parse;
 mod code_gen;
 
+/// All memory addresses must be strictly less than this limit.
+///
+/// This applies to both RAM (data memory) and ROM (instruction memory).
+pub const ADDRESS_LIMIT: u16 = 2u16.pow(15);
+
 /// Either an instruction, or a "label" pseudo-instruction.
 #[derive(Debug)]
 pub enum Line {

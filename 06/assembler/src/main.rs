@@ -17,7 +17,7 @@ use anyhow::{ensure, Context, Result};
 use instruction::Line;
 use itertools::Itertools;
 
-use crate::symbol_table::SymbolTable;
+use crate::{instruction::ADDRESS_LIMIT, symbol_table::SymbolTable};
 
 /// Expects one argmuent: the name of an assembly source file, with a `.asm`
 /// extension.
@@ -93,6 +93,11 @@ fn first_pass(in_file: &mut File, symbol_table: &mut SymbolTable) -> Result<()> 
                 symbol_table.new_label(symbol, num_instructions)?;
             }
             Line::Instr(_) => {
+                ensure!(
+                    num_instructions < ADDRESS_LIMIT,
+                    "can't emit more than {ADDRESS_LIMIT} instructions"
+                );
+
                 num_instructions += 1;
             }
         }

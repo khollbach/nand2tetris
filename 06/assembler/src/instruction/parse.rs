@@ -3,6 +3,7 @@
 use anyhow::{bail, ensure, Context, Result};
 
 use super::{AInstr, CInstr, Comp, Dest, Instr, InstrInner, Jump, Line};
+use crate::instruction::ADDRESS_LIMIT;
 
 impl Line {
     pub fn parse(line: &str) -> Result<Self> {
@@ -83,10 +84,9 @@ impl AInstr {
                 .parse()
                 .with_context(|| format!("failed to parse A-instruction as u16: {line:?}"))?;
 
-            let limit = 2u16.pow(15);
             ensure!(
-                value < limit,
-                "A-instruction literal must be less than limit: {value} vs {limit}"
+                value < ADDRESS_LIMIT,
+                "A-instruction literal must be less than limit: {value} vs {ADDRESS_LIMIT}"
             );
 
             Ok(AInstr::Literal(value))

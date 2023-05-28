@@ -3,7 +3,9 @@ use std::{
     iter::zip,
 };
 
-use anyhow::{bail, Result};
+use anyhow::{bail, ensure, Result};
+
+use crate::instruction::ADDRESS_LIMIT;
 
 /// A mapping from symbols to the memory addresses they correspond to.
 pub struct SymbolTable {
@@ -38,6 +40,11 @@ impl SymbolTable {
     /// Variables are assigned increasing memory addresses, starting from 16.
     pub fn new_variable(&mut self, symbol: String) -> Result<u16> {
         let address = 16 + self.num_variables;
+
+        ensure!(
+            address < ADDRESS_LIMIT,
+            "can't allocate more than {ADDRESS_LIMIT} variables"
+        );
 
         self.try_insert(symbol, address)?;
 
