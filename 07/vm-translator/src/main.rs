@@ -1,6 +1,8 @@
 //! Translates nand2tetris' Virtual Machine language to Hack assembly language.
 
+mod vm_command;
 mod parse;
+mod code_gen;
 
 use std::{
     env,
@@ -13,7 +15,7 @@ use std::{
 use anyhow::{ensure, Context, Result};
 use itertools::Itertools;
 
-use crate::parse::Command;
+use crate::vm_command::Command;
 
 /// Expects one argmuent: a filename with a `.vm` extension.
 ///
@@ -68,14 +70,14 @@ fn out_path(path: impl AsRef<Path>) -> Result<PathBuf> {
 }
 
 /// Translate VM language into assembly language.
-fn translate(in_file: File, _out_file: File) -> Result<()> {
+fn translate(in_file: File, mut out_file: File) -> Result<()> {
     let lines = BufReader::new(in_file)
         .lines()
         .map(|r| r.map_err(Into::into));
 
     for line in remove_comments_and_blanks(lines) {
         let command: Command = line?.parse()?;
-        dbg!(command);
+        command.code_gen(&mut out_file)?;
     }
 
     Ok(())
