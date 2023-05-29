@@ -47,6 +47,14 @@ fn main() -> Result<()> {
 fn out_path(path: impl AsRef<Path>) -> Result<PathBuf> {
     let path = path.as_ref();
 
+    let name = path
+        .file_name()
+        .and_then(OsStr::to_str)
+        .with_context(|| format!("expected unicode file name, got {path:?}"))?;
+
+    let starts_upper = name.starts_with(char::is_uppercase);
+    ensure!(starts_upper, "file name must start uppercase: {path:?}");
+
     let ext = path.extension().and_then(OsStr::to_str);
     ensure!(ext == Some("vm"), "must have .vm extension: {path:?}");
 
