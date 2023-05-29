@@ -1,7 +1,9 @@
 *.tst
 *.cmp
 *.out
+
 *.hack
+*.vm
 
 Cargo.lock
 target/
