@@ -3,6 +3,7 @@
 use std::fmt::{self, Debug};
 
 /// A command in the VM language.
+#[derive(Clone, Copy)]
 pub enum Command {
     Push { segment: Segment, index: u16 },
     Pop { segment: Segment, index: u16 },
@@ -18,6 +19,7 @@ pub enum Command {
 }
 
 /// One of the virtual memory segments of the nand2tetris VM.
+#[derive(Clone, Copy)]
 pub enum Segment {
     Argument,
     Local,
