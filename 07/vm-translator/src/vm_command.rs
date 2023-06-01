@@ -5,8 +5,17 @@ use std::fmt::{self, Debug};
 /// A command in the VM language.
 #[derive(Clone, Copy)]
 pub enum Command {
-    Push { segment: Segment, index: u16 },
-    Pop { segment: Segment, index: u16 },
+    /// Push to the stack.
+    Push {
+        source: VirtualMemoryAddr,
+    },
+
+    /// Pop from the stack.
+    Pop {
+        /// `segment` must not be `Constant`.
+        dest: VirtualMemoryAddr,
+    },
+
     Add,
     Sub,
     Neg,
@@ -16,6 +25,13 @@ pub enum Command {
     And,
     Or,
     Not,
+}
+
+/// A location in the nand2tetris VM's virtual memory.
+#[derive(Clone, Copy)]
+pub struct VirtualMemoryAddr {
+    pub segment: Segment,
+    pub index: u16,
 }
 
 /// One of the virtual memory segments of the nand2tetris VM.
@@ -34,8 +50,8 @@ pub enum Segment {
 impl Debug for Command {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Push { segment, index } => write!(f, "push {segment:?} {index:?}"),
-            Self::Pop { segment, index } => write!(f, "push {segment:?} {index:?}"),
+            Self::Push { source } => write!(f, "push {source:?}"),
+            Self::Pop { dest } => write!(f, "pop {dest:?}"),
             Self::Add => write!(f, "add"),
             Self::Sub => write!(f, "sub"),
             Self::Neg => write!(f, "neg"),
@@ -46,6 +62,12 @@ impl Debug for Command {
             Self::Or => write!(f, "or"),
             Self::Not => write!(f, "not"),
         }
+    }
+}
+
+impl Debug for VirtualMemoryAddr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?} {}", self.segment, self.index)
     }
 }
 
