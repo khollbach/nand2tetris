@@ -153,9 +153,9 @@ impl Command {
                     @SP\n\
                     M=M-1\n\
                     \n\
-                    // *SP := 0 - *SP\n\
+                    // *SP := -*SP\n\
                     A=M\n\
-                    M=0-M\n\
+                    M=-M\n\
                     \n\
                     // SP++\n\
                     @SP\n\
@@ -166,9 +166,74 @@ impl Command {
             Self::Eq => todo!(),
             Self::Gt => todo!(),
             Self::Lt => todo!(),
-            Self::And => todo!(),
-            Self::Or => todo!(),
-            Self::Not => todo!(),
+
+            // todo: reduce code dup b/w these (And/Or/Not) and Add/Sub/Neg
+            Self::And => {
+                write!(
+                    out,
+                    "// SP--\n\
+                    @SP\n\
+                    M=M-1\n\
+                    \n\
+                    // D := *SP\n\
+                    A=M\n\
+                    D=M\n\
+                    \n\
+                    // SP--\n\
+                    @SP\n\
+                    M=M-1\n\
+                    \n\
+                    // *SP &= D\n\
+                    A=M\n\
+                    M=M&D\n\
+                    \n\
+                    // SP++\n\
+                    @SP\n\
+                    M=M+1\n"
+                )?;
+            }
+
+            Self::Or => {
+                write!(
+                    out,
+                    "// SP--\n\
+                    @SP\n\
+                    M=M-1\n\
+                    \n\
+                    // D := *SP\n\
+                    A=M\n\
+                    D=M\n\
+                    \n\
+                    // SP--\n\
+                    @SP\n\
+                    M=M-1\n\
+                    \n\
+                    // *SP |= D\n\
+                    A=M\n\
+                    M=M|D\n\
+                    \n\
+                    // SP++\n\
+                    @SP\n\
+                    M=M+1\n"
+                )?;
+            }
+
+            Self::Not => {
+                write!(
+                    out,
+                    "// SP--\n\
+                    @SP\n\
+                    M=M-1\n\
+                    \n\
+                    // *SP := !*SP\n\
+                    A=M\n\
+                    M=!M\n\
+                    \n\
+                    // SP++\n\
+                    @SP\n\
+                    M=M+1\n"
+                )?;
+            }
         }
 
         write!(out, "\n\n\n")?;
@@ -342,9 +407,103 @@ M=M+1
 @SP
 M=M-1
 
-// *SP := 0 - *SP
+// *SP := -*SP
 A=M
-M=0-M
+M=-M
+
+// SP++
+@SP
+M=M+1
+
+
+
+";
+
+        assert_code_gen(command, code)
+    }
+
+    #[test]
+    fn and() -> Result<()> {
+        let command = Command::And;
+
+        let code = "\
+// *** and ***
+
+// SP--
+@SP
+M=M-1
+
+// D := *SP
+A=M
+D=M
+
+// SP--
+@SP
+M=M-1
+
+// *SP &= D
+A=M
+M=M&D
+
+// SP++
+@SP
+M=M+1
+
+
+
+";
+
+        assert_code_gen(command, code)
+    }
+
+    #[test]
+    fn or() -> Result<()> {
+        let command = Command::Or;
+
+        let code = "\
+// *** or ***
+
+// SP--
+@SP
+M=M-1
+
+// D := *SP
+A=M
+D=M
+
+// SP--
+@SP
+M=M-1
+
+// *SP |= D
+A=M
+M=M|D
+
+// SP++
+@SP
+M=M+1
+
+
+
+";
+
+        assert_code_gen(command, code)
+    }
+
+    #[test]
+    fn not() -> Result<()> {
+        let command = Command::Not;
+
+        let code = "\
+// *** not ***
+
+// SP--
+@SP
+M=M-1
+
+// *SP := !*SP
+A=M
+M=!M
 
 // SP++
 @SP
