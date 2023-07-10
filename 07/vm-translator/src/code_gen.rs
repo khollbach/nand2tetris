@@ -120,8 +120,49 @@ impl Command {
                 )?;
             }
 
-            Self::Sub => todo!(),
-            Self::Neg => todo!(),
+            // todo: reduce code dup b/w Add and Sub
+            Self::Sub => {
+                write!(
+                    out,
+                    "// SP--\n\
+                    @SP\n\
+                    M=M-1\n\
+                    \n\
+                    // D := *SP\n\
+                    A=M\n\
+                    D=M\n\
+                    \n\
+                    // SP--\n\
+                    @SP\n\
+                    M=M-1\n\
+                    \n\
+                    // *SP -= D\n\
+                    A=M\n\
+                    M=M-D\n\
+                    \n\
+                    // SP++\n\
+                    @SP\n\
+                    M=M+1\n"
+                )?;
+            }
+
+            Self::Neg => {
+                write!(
+                    out,
+                    "// SP--\n\
+                    @SP\n\
+                    M=M-1\n\
+                    \n\
+                    // *SP := 0 - *SP\n\
+                    A=M\n\
+                    M=0-M\n\
+                    \n\
+                    // SP++\n\
+                    @SP\n\
+                    M=M+1\n"
+                )?;
+            }
+
             Self::Eq => todo!(),
             Self::Gt => todo!(),
             Self::Lt => todo!(),
@@ -130,7 +171,8 @@ impl Command {
             Self::Not => todo!(),
         }
 
-        write!(out, "\n\n\n")
+        write!(out, "\n\n\n")?;
+        Ok(())
     }
 }
 
@@ -140,9 +182,23 @@ mod tests {
 
     use super::*;
 
+    fn assert_code_gen(command: Command, expected_code: &str) -> Result<()> {
+        let mut generated = vec![];
+        command.code_gen(&mut generated)?;
+        assert_eq!(str::from_utf8(&generated)?, expected_code);
+        Ok(())
+    }
+
     #[test]
     fn push_argument_5() -> Result<()> {
-        let expected = "\
+        let command = Command::Push {
+            source: VirtualMemoryAddr {
+                segment: Segment::Argument,
+                index: 5,
+            },
+        };
+
+        let code = "\
 // *** push argument 5 ***
 
 // D := *(ARG + 5)
@@ -165,23 +221,19 @@ M=M+1
 
 ";
 
-        let command = Command::Push {
-            source: VirtualMemoryAddr {
+        assert_code_gen(command, code)
+    }
+
+    #[test]
+    fn pop_argument_5() -> Result<()> {
+        let command = Command::Pop {
+            dest: VirtualMemoryAddr {
                 segment: Segment::Argument,
                 index: 5,
             },
         };
 
-        let mut actual = vec![];
-        command.code_gen(&mut actual)?;
-
-        assert_eq!(expected, str::from_utf8(&actual)?);
-        Ok(())
-    }
-
-    #[test]
-    fn pop_argument_5() -> Result<()> {
-        let expected = "\
+        let code = "\
 // *** pop argument 5 ***
 
 // SP--
@@ -208,23 +260,14 @@ M=D
 
 ";
 
-        let command = Command::Pop {
-            dest: VirtualMemoryAddr {
-                segment: Segment::Argument,
-                index: 5,
-            },
-        };
-
-        let mut actual = vec![];
-        command.code_gen(&mut actual)?;
-
-        assert_eq!(expected, str::from_utf8(&actual)?);
-        Ok(())
+        assert_code_gen(command, code)
     }
 
     #[test]
     fn add() -> Result<()> {
-        let expected = "\
+        let command = Command::Add;
+
+        let code = "\
 // *** add ***
 
 // SP--
@@ -251,12 +294,66 @@ M=M+1
 
 ";
 
-        let command = Command::Add;
+        assert_code_gen(command, code)
+    }
 
-        let mut actual = vec![];
-        command.code_gen(&mut actual)?;
+    #[test]
+    fn sub() -> Result<()> {
+        let command = Command::Sub;
 
-        assert_eq!(expected, str::from_utf8(&actual)?);
-        Ok(())
+        let code = "\
+// *** sub ***
+
+// SP--
+@SP
+M=M-1
+
+// D := *SP
+A=M
+D=M
+
+// SP--
+@SP
+M=M-1
+
+// *SP -= D
+A=M
+M=M-D
+
+// SP++
+@SP
+M=M+1
+
+
+
+";
+
+        assert_code_gen(command, code)
+    }
+
+    #[test]
+    fn neg() -> Result<()> {
+        let command = Command::Neg;
+
+        let code = "\
+// *** neg ***
+
+// SP--
+@SP
+M=M-1
+
+// *SP := 0 - *SP
+A=M
+M=0-M
+
+// SP++
+@SP
+M=M+1
+
+
+
+";
+
+        assert_code_gen(command, code)
     }
 }
