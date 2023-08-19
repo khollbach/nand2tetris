@@ -80,6 +80,9 @@ fn translate(in_file: File, mut out_file: File) -> Result<()> {
         command.code_gen(&mut out_file)?;
     }
 
+    // Terminate the assembly program with an infinite loop.
+    code_gen::halt(&mut out_file)?;
+
     Ok(())
 }
 
